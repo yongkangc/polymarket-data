@@ -1,6 +1,6 @@
-markets.csv
-processed/
+# Data files (too large for git, download separately)
 goldsky/
+processed/
 
 # Mac metadata
 **/.DS_Store
