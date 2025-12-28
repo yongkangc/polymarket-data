@@ -1,0 +1,9 @@
+{
+  "stage": "markets",
+  "completed_at": "2025-12-28T02:12:05.164524+00:00",
+  "status": "success",
+  "metadata": {
+    "markets_found": 133,
+    "output_file": "/mnt/data/poly_data/data/updown_markets.csv"
+  }
+}
