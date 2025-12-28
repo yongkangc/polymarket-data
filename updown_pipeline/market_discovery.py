@@ -2,6 +2,7 @@
 Stage 1: Market Discovery
 Query Polymarket API and filter for up/down markets.
 """
+import re
 import requests
 import polars as pl
 import time
@@ -42,18 +43,27 @@ def fetch_polymarket_events(closed: bool = False, limit: int = 1000) -> List[Dic
 
 def extract_duration(slug: str) -> Optional[str]:
     """
-    Extract duration from slug
+    Extract duration from slug using regex for precise matching
+
+    Uses regex with delimiters to avoid substring matches
+    (e.g., "5m" matching within "15m").
 
     Examples:
         btc-updown-5m-1766972400 → 5m
         sol-updown-15m-1766972700 → 15m
         eth-updown-1h-1766973000 → 1h
-    """
-    slug_lower = slug.lower()
 
-    for duration, patterns in config.DURATION_PATTERNS.items():
-        if any(pattern in slug_lower for pattern in patterns):
-            return duration
+    Returns:
+        Duration string ("5m", "15m", "1h") or None if no match
+    """
+    # Match exact patterns with delimiters
+    # Check 15m first, then 1h, then 5m to handle specificity
+    if re.search(r'-15m-|15\s*min', slug, re.IGNORECASE):
+        return "15m"
+    elif re.search(r'-1h-|1\s*hour', slug, re.IGNORECASE):
+        return "1h"
+    elif re.search(r'-5m-|5\s*min', slug, re.IGNORECASE):
+        return "5m"
 
     return None
 
