@@ -182,8 +182,12 @@ def integrate_binance_prices() -> int:
 
         # Join: trade time → asset price
         print(f"     Joining trade times...")
-        enriched = asset_trades.join_asof(
-            asset_prices.select(['ts', 'close']),
+        # Sort both DataFrames before join_asof (required by Polars)
+        asset_trades_sorted = asset_trades.sort('trade_ts_sec')
+        asset_prices_sorted = asset_prices.select(['ts', 'close']).sort('ts')
+
+        enriched = asset_trades_sorted.join_asof(
+            asset_prices_sorted,
             left_on='trade_ts_sec',
             right_on='ts',
             strategy='nearest'
@@ -195,8 +199,12 @@ def integrate_binance_prices() -> int:
         # Get unique markets for this asset with their open prices
         asset_markets = markets.filter(pl.col('asset') == asset)
 
-        market_opens_with_price = asset_markets.join_asof(
-            asset_prices.select(['ts', 'close']),
+        # Sort before join_asof
+        asset_markets_sorted = asset_markets.sort('start_time')
+        asset_prices_for_open = asset_prices.select(['ts', 'close']).sort('ts')
+
+        market_opens_with_price = asset_markets_sorted.join_asof(
+            asset_prices_for_open,
             left_on='start_time',
             right_on='ts',
             strategy='nearest'

@@ -122,35 +122,41 @@ def fetch_clob_trades_for_new_markets() -> int:
     })
     historical_trades = pl.read_csv(config.UPDOWN_TRADES_HISTORICAL)
 
-    # Identify markets with no trades
+    # For initial run: fetch all markets
+    # For streaming: this function should be modified to accept a list of markets to update
+    # Get all active markets (allows streaming to fetch new trades for existing markets)
     if len(historical_trades) == 0:
-        new_market_ids = all_markets['market_id'].unique().to_list()
+        # First run - get all markets
+        market_ids_to_fetch = all_markets['market_id'].unique().to_list()
     else:
+        # For incremental updates - get markets without recent trades
+        # TODO: In streaming mode, pass specific market IDs to update
+        # For now, only fetch truly new markets (no trades at all)
         historical_market_ids = historical_trades['market_id'].unique().to_list()
         new_markets = all_markets.filter(
             ~pl.col('market_id').is_in(historical_market_ids)
         )
-        new_market_ids = new_markets['market_id'].to_list()
+        market_ids_to_fetch = new_markets['market_id'].to_list()
 
     # Remove None values
-    new_market_ids = [mid for mid in new_market_ids if mid is not None]
+    market_ids_to_fetch = [mid for mid in market_ids_to_fetch if mid is not None]
 
-    if not new_market_ids:
+    if not market_ids_to_fetch:
         print("\n✅ No new markets to fetch from CLOB API")
         print("   All markets already have historical trades")
         print("="*70 + "\n")
         return 0
 
-    print(f"   Found {len(new_market_ids)} markets without historical trades")
+    print(f"   Found {len(market_ids_to_fetch)} markets to fetch from CLOB API")
     print(f"\n→ Fetching trades from CLOB API...")
     print(f"   (Rate limited: {config.API_DELAY}s between requests)")
 
-    # Fetch trades for each new market
+    # Fetch trades for each market
     all_new_trades = []
     markets_with_trades = 0
 
-    for i, market_id in enumerate(new_market_ids, 1):
-        print(f"   [{i}/{len(new_market_ids)}] Fetching market {market_id}...", end=" ")
+    for i, market_id in enumerate(market_ids_to_fetch, 1):
+        print(f"   [{i}/{len(market_ids_to_fetch)}] Fetching market {market_id}...", end=" ")
 
         trades = fetch_market_trades_from_clob(market_id)
 
@@ -163,11 +169,11 @@ def fetch_clob_trades_for_new_markets() -> int:
             print("○ no trades")
 
         # Rate limiting
-        if i < len(new_market_ids):
+        if i < len(market_ids_to_fetch):
             time.sleep(config.API_DELAY)
 
     print(f"\n→ Summary:")
-    print(f"   Markets queried: {len(new_market_ids)}")
+    print(f"   Markets queried: {len(market_ids_to_fetch)}")
     print(f"   Markets with trades: {markets_with_trades}")
     print(f"   Total new trades: {len(all_new_trades):,}")
 
