@@ -1,6 +1,8 @@
 # Data files (too large for git, download separately)
 goldsky/
 processed/
+data/raw/*.csv
+data/raw/binance/
 
 # Mac metadata
 **/.DS_Store
